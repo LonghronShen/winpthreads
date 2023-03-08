@@ -23,92 +23,131 @@
 #ifndef WIN_PTHREADS_MISC_H
 #define WIN_PTHREADS_MISC_H
 
+#include <sys/types.h>
+
+#include <windows.h>
+
 #include "pthread_compat.h"
+#include "utils.h"
 
 #ifndef assert
 
 #ifndef ASSERT_TRACE
-# define ASSERT_TRACE 0
+#define ASSERT_TRACE 0
 #else
-# undef ASSERT_TRACE
-# define ASSERT_TRACE 0
+#undef ASSERT_TRACE
+#define ASSERT_TRACE 0
 #endif
 
-# define assert(e) \
-   ((e) ? ((ASSERT_TRACE) ? fprintf(stderr, \
-                                    "Assertion succeeded: (%s), file %s, line %d\n", \
-                        #e, __FILE__, (int) __LINE__), \
-                                fflush(stderr) : \
-                             0) : \
-          (fprintf(stderr, "Assertion failed: (%s), file %s, line %d\n", \
-                   #e, __FILE__, (int) __LINE__), exit(1), 0))
+#define assert(e)                                                              \
+  ((e) ? ((ASSERT_TRACE)                                                       \
+          ? fprintf(stderr, "Assertion succeeded: (%s), file %s, line %d\n",   \
+                    #e, __FILE__, (int)__LINE__),                              \
+          fflush(stderr) : 0)                                                  \
+       : (fprintf(stderr, "Assertion failed: (%s), file %s, line %d\n", #e,    \
+                  __FILE__, (int)__LINE__),                                    \
+          exit(1), 0))
 
-# define fixme(e) \
-   ((e) ? ((ASSERT_TRACE) ? fprintf(stderr, \
-                                    "Assertion succeeded: (%s), file %s, line %d\n", \
-                        #e, __FILE__, (int) __LINE__), \
-                                fflush(stderr) : \
-                             0) : \
-          (fprintf(stderr, "FIXME: (%s), file %s, line %d\n", \
-                   #e, __FILE__, (int) __LINE__), 0, 0))
+#define fixme(e)                                                               \
+  ((e) ? ((ASSERT_TRACE)                                                       \
+          ? fprintf(stderr, "Assertion succeeded: (%s), file %s, line %d\n",   \
+                    #e, __FILE__, (int)__LINE__),                              \
+          fflush(stderr) : 0)                                                  \
+       : (fprintf(stderr, "FIXME: (%s), file %s, line %d\n", #e, __FILE__,     \
+                  (int)__LINE__),                                              \
+          0, 0))
 
 #endif
 
-#define PTR2INT(x)	((int)(uintptr_t)(x))
+#define PTR2INT(x) ((int)(uintptr_t)(x))
 
-#if SIZE_MAX>UINT_MAX
+#if SIZE_MAX > UINT_MAX
 typedef long long LONGBAG;
 #else
 typedef long LONGBAG;
 #endif
 
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+inline BOOL GetHandleInformationCompat(HANDLE hObject, LPDWORD lpdwFlags) {
+  if (g_nPlatform > 0) {
+    return GetHandleInformation(hObject, lpdwFlags);
+  }
+
+  return 1;
+}
+
+#undef TryEnterCriticalSection
+int WINAPI TryEnterCriticalSection_compat(CRITICAL_SECTION* cs);
+#define TryEnterCriticalSection TryEnterCriticalSection_compat
+
 #undef GetHandleInformation
-#define GetHandleInformation(h,f)  (1)
-#endif
+#define GetHandleInformation GetHandleInformationCompat
 
-#define CHECK_HANDLE(h) { DWORD dwFlags; \
-    if (!(h) || ((h) == INVALID_HANDLE_VALUE) || !GetHandleInformation((h), &dwFlags)) \
-    return EINVAL; }
+#define CHECK_HANDLE(h)                                                        \
+  {                                                                            \
+    DWORD dwFlags;                                                             \
+    if (!(h) || ((h) == INVALID_HANDLE_VALUE) ||                               \
+        !GetHandleInformation((h), &dwFlags))                                  \
+      return EINVAL;                                                           \
+  }
 
-#define CHECK_PTR(p)    if (!(p)) return EINVAL;
+#define CHECK_PTR(p)                                                           \
+  if (!(p))                                                                    \
+    return EINVAL;
 
-#define UPD_RESULT(x,r)    { int _r=(x); r = r ? r : _r; }
+#define UPD_RESULT(x, r)                                                       \
+  {                                                                            \
+    int _r = (x);                                                              \
+    r = r ? r : _r;                                                            \
+  }
 
-#define CHECK_THREAD(t)  { \
-    CHECK_PTR(t); \
-    CHECK_HANDLE(t->h); }
+#define CHECK_THREAD(t)                                                        \
+  {                                                                            \
+    CHECK_PTR(t);                                                              \
+    CHECK_HANDLE(t->h);                                                        \
+  }
 
-#define CHECK_OBJECT(o, e)  { DWORD dwFlags; \
-    if (!(o)) return e; \
-    if (!((o)->h) || (((o)->h) == INVALID_HANDLE_VALUE) || !GetHandleInformation(((o)->h), &dwFlags)) \
-        return e; }
+#define CHECK_OBJECT(o, e)                                                     \
+  {                                                                            \
+    DWORD dwFlags;                                                             \
+    if (!(o))                                                                  \
+      return e;                                                                \
+    if (!((o)->h) || (((o)->h) == INVALID_HANDLE_VALUE) ||                     \
+        !GetHandleInformation(((o)->h), &dwFlags))                             \
+      return e;                                                                \
+  }
 
-#define VALID(x)    if (!(p)) return EINVAL;
+#define VALID(x)                                                               \
+  if (!(p))                                                                    \
+    return EINVAL;
 
 /* ms can be 64 bit, solve wrap-around issues: */
-static WINPTHREADS_INLINE unsigned long dwMilliSecs(unsigned long long ms)
-{
-  if (ms >= 0xffffffffULL) return 0xfffffffful;
-  return (unsigned long) ms;
+static WINPTHREADS_INLINE unsigned long dwMilliSecs(unsigned long long ms) {
+  if (ms >= 0xffffffffULL)
+    return 0xfffffffful;
+  return (unsigned long)ms;
 }
 
 #ifndef _mm_pause
-#define _mm_pause()			{__asm__ __volatile__("pause");}
+#define _mm_pause()                                                            \
+  { __asm__ __volatile__("pause"); }
 #endif
 
 #ifndef _ReadWriteBarrier
-#define _ReadWriteBarrier   __sync_synchronize
+#define _ReadWriteBarrier __sync_synchronize
 #endif
 
 #ifndef YieldProcessor
-#define YieldProcessor      _mm_pause
+#define YieldProcessor _mm_pause
 #endif
 
 unsigned long long _pthread_time_in_ms(void);
 unsigned long long _pthread_time_in_ms_from_timespec(const struct timespec *ts);
 unsigned long long _pthread_rel_time_in_ms(const struct timespec *ts);
-unsigned long _pthread_wait_for_single_object (void *handle, unsigned long timeout);
-unsigned long _pthread_wait_for_multiple_objects (unsigned long count, void **handles, unsigned int all, unsigned long timeout);
+unsigned long _pthread_wait_for_single_object(void *handle,
+                                              unsigned long timeout);
+unsigned long _pthread_wait_for_multiple_objects(unsigned long count,
+                                                 void **handles,
+                                                 unsigned int all,
+                                                 unsigned long timeout);
 
 #endif

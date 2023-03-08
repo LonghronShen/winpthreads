@@ -221,7 +221,7 @@ struct _pthread_cleanup
 
 // [Colin Finck, 2021-02-10] The Visual Studio 2019 CRT defines struct timespec
 // without defining _TIMESPEC_DEFINED, so disable this part.
-#if 0
+#ifdef _MSC_VER
 struct timespec {
   time_t  tv_sec;   /* Seconds */
   long    tv_nsec;  /* Nanoseconds */

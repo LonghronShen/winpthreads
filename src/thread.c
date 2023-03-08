@@ -57,7 +57,7 @@ static pthread_t idListNextId = 0;
 #if !defined(_MSC_VER)
 #define USE_VEH_FOR_MSC_SETTHREADNAME
 #endif
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef LEGACY_WINDOWS_OR_NONE_DESKTOP
 /* forbidden RemoveVectoredExceptionHandler/AddVectoredExceptionHandler APIs */
 #undef USE_VEH_FOR_MSC_SETTHREADNAME
 #endif
@@ -84,39 +84,37 @@ typedef struct _THREADNAME_INFO
   DWORD  dwFlags;	/* reserved for future use, must be zero */
 } THREADNAME_INFO;
 
-static void
-SetThreadName (DWORD dwThreadID, LPCSTR szThreadName)
-{
-   THREADNAME_INFO info;
-   DWORD infosize;
+static void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName) {
+  THREADNAME_INFO info;
+  DWORD infosize;
 
-   info.dwType = 0x1000;
-   info.szName = szThreadName;
-   info.dwThreadID = dwThreadID;
-   info.dwFlags = 0;
+  info.dwType = 0x1000;
+  info.szName = szThreadName;
+  info.dwThreadID = dwThreadID;
+  info.dwFlags = 0;
 
-   infosize = sizeof (info) / sizeof (ULONG_PTR);
+  infosize = sizeof(info) / sizeof(ULONG_PTR);
 
-#if defined(_MSC_VER) && !defined (USE_VEH_FOR_MSC_SETTHREADNAME)
-   __try
-     {
-       RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *)&info);
-     }
-   __except (EXCEPTION_EXECUTE_HANDLER)
-     {
-     }
+#if defined(_MSC_VER) && !defined(USE_VEH_FOR_MSC_SETTHREADNAME)
+  __try {
+    RaiseException(EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *)&info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+  }
 #else
-   /* Without a debugger we *must* have an exception handler,
-    * otherwise raising an exception will crash the process.
-    */
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-   if ((!IsDebuggerPresent ()) && (SetThreadName_VEH_handle == NULL))
-#else
-   if (!IsDebuggerPresent ())
-#endif
-     return;
+  /* Without a debugger we *must* have an exception handler,
+   * otherwise raising an exception will crash the process.
+   */
+  if (!IsDebuggerPresent()) {
+    if (g_nPlatform > 0) {
+      if (SetThreadName_VEH_handle == NULL) {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
 
-   RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *) &info);
+  RaiseException(EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *)&info);
 #endif
 }
 
