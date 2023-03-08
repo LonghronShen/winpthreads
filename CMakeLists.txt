@@ -46,7 +46,7 @@ target_compile_definitions(${project_name}
 
 if(CMAKE_CXX_IS_CLANG_CL_GNU)
     target_compile_definitions(${project_name}
-        PRIVATE "_TIMESPEC_DEFINED"
+        PUBLIC "_TIMESPEC_DEFINED"
     )
 
     target_compile_options(${project_name}
