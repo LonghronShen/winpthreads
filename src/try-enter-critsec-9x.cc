@@ -13,7 +13,10 @@ struct critical_section {
   // different.
   std::uint32_t reserved[4];
 };
-static_assert(sizeof(critical_section) == 24);
+
+static_assert(
+    sizeof(critical_section) == 24,
+    "The \"critical_section\" structure should be the size of 24 bytes.");
 
 struct critical_section_impl {
   std::uint8_t type;
@@ -23,15 +26,35 @@ struct critical_section_impl {
   std::atomic<int> lock_count;
   void *internal_pointers[3];
 };
-static_assert(sizeof(critical_section_impl) == 32);
+
+static_assert(
+    sizeof(critical_section_impl) == 32,
+    "The \"critical_section_impl\" structure should be the size of 32 bytes.");
 
 namespace {
 
 constexpr std::uint8_t critical_section_type = 4;
 
-template <unsigned TdbxOffset> void *get_current_tdbx() {
+inline const char *get_current_tib() {
   const char *tib;
+
+#ifdef _MSC_VER
+  _asm {
+        push    ebp
+        mov     ebp, esp
+        sub     esp, 16
+        mov eax, fs:[0x18]
+        mov     DWORD PTR [ebp-4], eax
+  }
+#else
   asm("mov {%%fs:0x18, %0|%0, fs:[0x18]}" : "=r"(tib));
+#endif
+
+  return tib;
+}
+
+template <unsigned TdbxOffset> void *get_current_tdbx() {
+  const char *tib = get_current_tib();
   return *reinterpret_cast<void *const *>(tib + TdbxOffset);
 }
 

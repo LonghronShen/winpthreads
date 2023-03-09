@@ -127,10 +127,7 @@ static WINPTHREADS_INLINE unsigned long dwMilliSecs(unsigned long long ms) {
   return (unsigned long)ms;
 }
 
-#ifndef _mm_pause
-#define _mm_pause()                                                            \
-  { __asm__ __volatile__("pause"); }
-#endif
+#include <immintrin.h>
 
 #ifndef _ReadWriteBarrier
 #define _ReadWriteBarrier __sync_synchronize
