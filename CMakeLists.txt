@@ -10,10 +10,6 @@ file(GLOB src
     ${CMAKE_CURRENT_LIST_DIR}/src/*.rc
 )
 
-if(NOT WIN32)
-    message(FATAL_ERROR "Unsupported platform detected")
-endif()
-
 if(MINGW)
     file(GLOB_RECURSE libgcc_src
         ${CMAKE_CURRENT_LIST_DIR}/src/libgcc/*.c
@@ -44,7 +40,7 @@ target_compile_definitions(${project_name}
     PUBLIC "UNICODE"
 )
 
-if(CMAKE_CXX_IS_CLANG_CL_GNU)
+if(CMAKE_CXX_IS_CLANG_WIN)
     target_compile_definitions(${project_name}
         PUBLIC "_TIMESPEC_DEFINED"
     )
